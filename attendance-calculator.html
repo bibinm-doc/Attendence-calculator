@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Calculator — How many more days to hit your target</title>
+<!--
+  ADSENSE SETUP — replace ca-pub-0000000000000000 below with your real
+  publisher ID once approved, then uncomment this script tag.
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000" crossorigin="anonymous"></script>
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --board: #1f3a2e;
+    --board-2: #24463a;
+    --chalk: #f4f1e6;
+    --chalk-dim: #cfd6cd;
+    --yellow: #e8c468;
+    --red: #c1666b;
+    --blue: #7fa3b0;
+    --line: rgba(244,241,230,0.14);
+    --radius: 10px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--board);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.03), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(255,255,255,0.03), transparent 60%);
+    color: var(--chalk);
+    font-family: 'IBM Plex Sans', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 32px 16px 60px;
+  }
+
+  h1, h2, .headline{
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  .wrap{
+    width:100%;
+    max-width: 640px;
+  }
+
+  header{
+    text-align:left;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+  }
+  header h1{
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+  }
+  header p{
+    margin:0;
+    color: var(--chalk-dim);
+    font-size: 0.95rem;
+    max-width: 46ch;
+  }
+
+  .card{
+    background: var(--board-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px;
+    margin-bottom: 22px;
+  }
+
+  .field{
+    margin-bottom: 18px;
+  }
+  .field label{
+    display:block;
+    font-size: 0.85rem;
+    color: var(--chalk-dim);
+    margin-bottom: 6px;
+  }
+  .field input{
+    width:100%;
+    background: rgba(244,241,230,0.06);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 11px 12px;
+    color: var(--chalk);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .field input:focus{
+    outline: none;
+    border-color: var(--yellow);
+    background: rgba(244,241,230,0.09);
+  }
+  .field .hint{
+    font-size: 0.78rem;
+    color: rgba(207,214,205,0.65);
+    margin-top: 5px;
+  }
+
+  .row2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  button{
+    width:100%;
+    background: var(--yellow);
+    color: #1f3a2e;
+    border: none;
+    border-radius: 6px;
+    padding: 13px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor:pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  button:hover{ background: #efd489; }
+  button:active{ transform: scale(0.98); }
+
+  .result{
+    display:none;
+    text-align:center;
+    padding: 8px 4px 4px;
+  }
+  .result.show{ display:block; }
+
+  .result .number{
+    font-family: 'Source Serif 4', serif;
+    font-size: 3.4rem;
+    font-weight: 700;
+    line-height:1;
+    margin: 4px 0 10px;
+  }
+  .result .number.good{ color: var(--yellow); }
+  .result .number.warn{ color: var(--red); }
+
+  .result .label{
+    color: var(--chalk-dim);
+    font-size: 0.95rem;
+    max-width: 40ch;
+    margin: 0 auto;
+  }
+
+  .divider{
+    border:none;
+    border-top: 1px dashed var(--line);
+    margin: 20px 0;
+  }
+
+  .stats{
+    display:flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .stat{
+    flex:1;
+    min-width: 120px;
+    text-align:center;
+    padding: 12px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(244,241,230,0.03);
+  }
+  .stat .v{
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  .stat .k{
+    font-size: 0.72rem;
+    color: var(--chalk-dim);
+    margin-top: 3px;
+  }
+
+  .error{
+    display:none;
+    color: var(--red);
+    font-size: 0.9rem;
+    margin-top: 10px;
+  }
+  .error.show{ display:block; }
+
+  /* --- Ad slots ---
+     Replace the contents of .ad-slot with your ad network's script/ins tag
+     (e.g. Google AdSense <ins class="adsbygoogle">...</ins>).
+     Two slots are provided: one below the header (leaderboard-style)
+     and one below the result (rectangle-style). Remove either if unused. */
+  .ad-slot{
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: rgba(207,214,205,0.45);
+    font-size: 0.78rem;
+    margin-bottom: 22px;
+    min-height: 90px;
+    background: rgba(0,0,0,0.08);
+  }
+
+  footer{
+    color: rgba(207,214,205,0.4);
+    font-size: 0.78rem;
+    margin-top: 10px;
+    text-align:center;
+  }
+
+  @media (max-width: 480px){
+    .row2{ grid-template-columns: 1fr; }
+    .result .number{ font-size: 2.6rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Attendance Calculator</h1>
+    <p>Enter where you stand today and how many working days are left — find out exactly how many of them you need to attend.</p>
+  </header>
+
+  <!-- Ad slot: leaderboard -->
+  <div class="ad-slot" id="ad-top">
+    Advertisement
+    <!--
+      Once approved, delete "Advertisement" above and uncomment this block.
+      Replace ca-pub-0000000000000000 and 1111111111 with your real IDs.
+
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-0000000000000000"
+         data-ad-slot="1111111111"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    -->
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="current">Current attendance percentage</label>
+      <input type="number" id="current" placeholder="e.g. 68" min="0" max="100" step="0.1" inputmode="decimal">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="remaining">Working days remaining</label>
+        <input type="number" id="remaining" placeholder="e.g. 40" min="0" step="1" inputmode="numeric">
+        <div class="hint">Upcoming days left in the term</div>
+      </div>
+      <div class="field">
+        <label for="absent">Days absent so far</label>
+        <input type="number" id="absent" placeholder="e.g. 29" min="0" step="1" inputmode="numeric">
+        <div class="hint">Working days you've missed up to today</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="target">Target attendance percentage</label>
+      <input type="number" id="target" value="75" min="1" max="100" step="0.1" inputmode="decimal">
+    </div>
+
+    <button onclick="calculate()">Calculate</button>
+    <div class="error" id="error"></div>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <div class="label" id="resultLabel">&nbsp;</div>
+    <div class="number" id="resultNumber">0</div>
+    <div class="label" id="resultSub">&nbsp;</div>
+
+    <hr class="divider">
+
+    <div class="stats">
+      <div class="stat">
+        <div class="v" id="statAttended">0</div>
+        <div class="k">days attended so far</div>
+      </div>
+      <div class="stat">
+        <div class="v" id="statFinal">0%</div>
+        <div class="k">attendance if you follow this plan</div>
+      </div>
+      <div class="stat">
+        <div class="v" id="statTotal">0</div>
+        <div class="k">total working days this term</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ad slot: rectangle -->
+  <div class="ad-slot" id="ad-bottom">
+    Advertisement
+    <!--
+      Same as the top slot — use a DIFFERENT data-ad-slot number here
+      (AdSense gives you a separate one per ad unit you create).
+
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-0000000000000000"
+         data-ad-slot="2222222222"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    -->
+  </div>
+
+  <footer>Figures are calculated from what you enter — double-check against your college's official attendance sheet.</footer>
+</div>
+
+<script>
+function calculate(){
+  const errorEl = document.getElementById('error');
+  const resultCard = document.getElementById('resultCard');
+  errorEl.classList.remove('show');
+  errorEl.textContent = '';
+
+  const current = parseFloat(document.getElementById('current').value);
+  const remaining = parseFloat(document.getElementById('remaining').value);
+  const absent = parseFloat(document.getElementById('absent').value);
+  const target = parseFloat(document.getElementById('target').value);
+
+  if ([current, remaining, absent, target].some(v => isNaN(v))) {
+    errorEl.textContent = 'Please fill in every field with a number.';
+    errorEl.classList.add('show');
+    resultCard.classList.remove('show');
+    return;
+  }
+  if (current < 0 || current > 100 || target <= 0 || target > 100 || remaining < 0 || absent < 0) {
+    errorEl.textContent = 'Percentages must be 0–100, and days can\'t be negative.';
+    errorEl.classList.add('show');
+    resultCard.classList.remove('show');
+    return;
+  }
+  if (current >= 100 && absent > 0) {
+    errorEl.textContent = 'A 100% attendance with days absent doesn\'t add up — check your numbers.';
+    errorEl.classList.add('show');
+    resultCard.classList.remove('show');
+    return;
+  }
+  if (current === 0 && absent === 0) {
+    errorEl.textContent = 'Enter how many days you\'ve been absent so far.';
+    errorEl.classList.add('show');
+    resultCard.classList.remove('show');
+    return;
+  }
+
+  // current% = attended / heldSoFar * 100, and attended = heldSoFar - absent
+  // => heldSoFar = absent * 100 / (100 - current)
+  const heldSoFar = Math.round((absent * 100) / (100 - current));
+  const attended = heldSoFar - absent;
+  const totalFuture = heldSoFar + remaining;
+  const requiredAttended = Math.ceil((target / 100) * totalFuture);
+  const daysNeeded = requiredAttended - attended;
+
+  const numberEl = document.getElementById('resultNumber');
+  const labelEl = document.getElementById('resultLabel');
+  const subEl = document.getElementById('resultSub');
+
+  let finalAttended, finalPercent;
+
+  if (daysNeeded <= 0) {
+    // Already on track — how many of the remaining days can be skipped?
+    const maxSkip = Math.floor(attended + remaining - (target / 100) * totalFuture);
+    numberEl.textContent = Math.max(maxSkip, 0);
+    numberEl.className = 'number good';
+    labelEl.textContent = `You're already on pace for ${target}%.`;
+    subEl.textContent = maxSkip > 0
+      ? `You can skip up to ${maxSkip} of the remaining ${remaining} day${remaining === 1 ? '' : 's'} and stay at or above ${target}%.`
+      : `Attend all remaining days to stay exactly at ${target}%.`;
+    finalAttended = attended + remaining;
+  } else if (daysNeeded > remaining) {
+    // Not achievable with the days left
+    const bestPossible = ((attended + remaining) / totalFuture) * 100;
+    numberEl.textContent = remaining;
+    numberEl.className = 'number warn';
+    labelEl.textContent = `${target}% isn't reachable with ${remaining} day${remaining === 1 ? '' : 's'} left.`;
+    subEl.textContent = `Attending every remaining day gets you to ${bestPossible.toFixed(1)}% at most.`;
+    finalAttended = attended + remaining;
+  } else {
+    numberEl.textContent = daysNeeded;
+    numberEl.className = 'number good';
+    labelEl.textContent = `More working days you need to attend to reach ${target}%`;
+    subEl.textContent = `Out of the ${remaining} day${remaining === 1 ? '' : 's'} left, attend at least ${daysNeeded}.`;
+    finalAttended = attended + daysNeeded;
+  }
+
+  finalPercent = (finalAttended / totalFuture) * 100;
+
+  document.getElementById('statAttended').textContent = attended;
+  document.getElementById('statFinal').textContent = finalPercent.toFixed(1) + '%';
+  document.getElementById('statTotal').textContent = totalFuture;
+
+  resultCard.classList.add('show');
+}
+</script>
+</body>
+</html>
